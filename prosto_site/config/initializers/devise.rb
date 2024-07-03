@@ -1,9 +1,8 @@
 Devise.setup do |config|
 
-  config.omniauth :instagram, "_takiyasha_hime", "kseniathird2505",
+  config.omniauth :instagram, # secret 
                   scope: 'user_profile,user_media',
                   callback_path: "/users/auth/instagram/callback"
-
 
   config.mailer_sender = 'please-change-me-at-config-initializers-devise@example.com'
 
