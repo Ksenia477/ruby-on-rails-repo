@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Planner</title>
+  <%= stylesheet_link_tag 'application', media: 'all' %>
+  <%= javascript_include_tag 'application' %>
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg bg-body-tertiary">
+    <div class="container-fluid">
+      <!-- Отображение текущей даты -->
+      <h3 class="mt-4" id="current-date"><%= @current_date %></h3>
+    </div>
+  </nav>
+
+  <div class="container-fluid">
+    <!-- Дни недели -->
+    <ul class="nav nav-pills my-3">
+      <% @days_of_week.each_with_index do |day, index| %>
+        <li class="nav-item">
+          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= day %>')"><%= day %></a>
+        </li>
+      <% end %>
+    </ul>
+    <!-- Секция для расписания на день -->
+    <div id="schedule-container">
+      <p>Выберите день недели, чтобы увидеть расписание.</p>
+    </div>
+  </div>
+
+
+  <script>
+    function loadSchedule(day) {
+      fetch(`/planner/show_schedule/${day}`)
+        .then(response => response.text())
+        .then(html => {
+          document.getElementById("schedule-container").innerHTML = html;
+        });
+    }
+  </script>
+</body>
+</html>
