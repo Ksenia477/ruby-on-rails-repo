@@ -1,8 +1,5 @@
 Rails.application.routes.draw do
-  root 'home#index'
-  # post '/task', to: 'task#create'
-  # patch '/task/:id', to:'task#update'
-  # delete '/task/:id', to: 'task#destroy'
-  resources :task
+  root to: 'home#index'
   get 'home/show_schedule/:day', to: 'home#show_schedule', as: 'show_schedule'
+  post 'home/save_schedule/:day', to: 'home#save_schedule', as: 'save_schedule'
 end

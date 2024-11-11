@@ -3,39 +3,58 @@
 <head>
   <title>Planner</title>
   <%= stylesheet_link_tag 'application', media: 'all' %>
-  <%= javascript_include_tag 'application' %>
+  <%= javascript_include_tag 'application', 'data-turbo-track': 'reload'%>
+
 </head>
 <body>
   <nav class="navbar navbar-expand-lg bg-body-tertiary">
     <div class="container-fluid">
-      <!-- Отображение текущей даты -->
       <h3 class="mt-4" id="current-date"><%= @current_date %></h3>
+
+      
     </div>
   </nav>
 
   <div class="container-fluid">
-    <!-- Дни недели -->
     <ul class="nav nav-pills my-3">
       <% @days_of_week.each_with_index do |day, index| %>
         <li class="nav-item">
-          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= day %>')"><%= day %></a>
+          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= index %>')"><%= day %></a>
         </li>
       <% end %>
     </ul>
-    <!-- Секция для расписания на день -->
     <div id="schedule-container">
-      <p>Выберите день недели, чтобы увидеть расписание.</p>
+      <p>Выберите день недели, чтобы увидеть расписание и добавить задачи.</p>
     </div>
   </div>
 
-
   <script>
     function loadSchedule(day) {
-      fetch(`/planner/show_schedule/${day}`)
+      fetch(`/home/show_schedule/${day}`)
         .then(response => response.text())
         .then(html => {
           document.getElementById("schedule-container").innerHTML = html;
         });
+    }
+
+    function saveTasks(day) {
+      const tasks = {};
+      document.querySelectorAll('.task-input').forEach(input => {
+        tasks[input.dataset.time] = input.value;
+      });
+
+      fetch(`/home/save_schedule/${day}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRF-Token': '<%= form_authenticity_token %>'
+        },
+        body: JSON.stringify({ tasks: tasks })
+      })
+      .then(response => response.text())
+      .then(result => {
+        alert("Задачи сохранены!");
+      });
     }
   </script>
 </body>
