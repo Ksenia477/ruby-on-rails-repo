@@ -11,15 +11,22 @@
     <div class="container-fluid">
       <h3 class="mt-4" id="current-date"><%= @current_date %></h3>
 
-      
+      <% if user_signed_in? %>
+        <%= button_to "Sign out", destroy_user_session_path, method: :delete %>
+      <% else %>
+        <%= button_to "Sign in", new_user_session_path %>
+      <% end %>
     </div>
   </nav>
 
   <div class="container-fluid">
     <ul class="nav nav-pills my-3">
       <% @days_of_week.each_with_index do |day, index| %>
-        <li class="nav-item">
-          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= index %>')"><%= day %></a>
+        <li class="nav-item text-center">
+          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= index %>')">
+            <%= day %> <br>
+            <small><%= @dates_of_week[index] %></small> <!-- Отображение даты под названием дня недели -->
+          </a>
         </li>
       <% end %>
     </ul>

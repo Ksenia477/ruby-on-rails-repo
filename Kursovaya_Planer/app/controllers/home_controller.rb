@@ -1,10 +1,10 @@
 class HomeController < ApplicationController
-  # before_action :authenticate_user!, only: [:index]
-
   def index
     I18n.locale = :ru
     @current_date = I18n.l(Date.current, format: "%d %B")
     @days_of_week = I18n.t('date.day_names').rotate(0)
+
+    @dates_of_week = (0..6).map { |i| I18n.l(Date.current + i, format: "%d %B") }
   end
 
   def show_schedule
