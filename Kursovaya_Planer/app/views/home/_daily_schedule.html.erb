@@ -1,16 +1,21 @@
 <div class="card mt-3">
   <div class="card-body">
     <h5 class="card-title">Расписание на <%= @day %></h5>
-    <form id="tasks-form">
-      <% (8..20).each do |hour| %>
-        <div class="mb-2 row">
-          <label class="col-form-label col-sm-2"><%= "#{hour}:00" %></label>
-          <div class="col-sm-10">
-            <input type="text" class="form-control task-input" data-time="<%= hour %>" placeholder="Введите задачу для <%= hour %>:00">
-          </div>
-        </div>
-      <% end %>
-      <button type="button" class="btn btn-primary mt-3" onclick="saveTasks('<%= @day %>')">Сохранить задачи</button>
-    </form>
+    <div class="schedule">
+      <!-- Пробуждение -->
+      <div class="time-slot">
+        <p><strong>Пробуждение:</strong> 07:00</p>
+      </div>
+
+      <!-- Кнопка для добавления задачи -->
+      <div class="time-slot add-task">
+        <button class="btn btn-success" onclick="openModal('<%= @day %>')">Добавить задачу</button>
+      </div>
+
+      <!-- Сон -->
+      <div class="time-slot">
+        <p><strong>Сон:</strong> 23:00</p>
+      </div>
+    </div>
   </div>
 </div>

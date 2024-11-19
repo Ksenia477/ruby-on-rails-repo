@@ -3,65 +3,153 @@
 <head>
   <title>Planner</title>
   <%= stylesheet_link_tag 'application', media: 'all' %>
-  <%= javascript_include_tag 'application', 'data-turbo-track': 'reload'%>
-
+  <%= javascript_include_tag 'application', 'data-turbo-track': 'reload' %>
 </head>
 <body>
   <nav class="navbar navbar-expand-lg bg-body-tertiary">
     <div class="container-fluid">
-      <h3 class="mt-4" id="current-date"><%= @current_date %></h3>
-
+      <h3 class="mt-4" id="current-date"><%= @current_date_formatted %></h3>
       <% if user_signed_in? %>
-        <%= button_to "Sign out", destroy_user_session_path, method: :delete %>
+        <div class="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+            <%= current_user.email %>
+          </button>
+          <ul class="dropdown-menu">
+            <li>
+              <%= button_to "Выйти", destroy_user_session_path, method: :delete, class: "dropdown-item" %>
+            </li>
+          </ul>
+        </div>
       <% else %>
-        <%= button_to "Sign in", new_user_session_path %>
+        <%= button_to "Войти", new_user_session_path, class: "btn btn-primary" %>
       <% end %>
     </div>
   </nav>
 
+  <button onclick="openCalendar()">Открыть календарь</button>
+  <input type="date" id="calendar" style="display:none" onchange="navigateToDate(this.value)">
+
+  <div class="week-navigation">
+    <button onclick="navigateWeek(-1)">←</button>
+    <div class="week d-flex">
+      <% @week_dates.each_with_index do |date, index| %>
+        <a href="?date=<%= date %>" class="btn btn-outline-success mx-1 <%= 'active' if date == Date.parse(params[:date] || Date.current.to_s) %>">
+          <%= @days_of_week[index] %>, <%= date.strftime('%d %B') %>
+        </a>
+      <% end %>
+    </div>
+    <button onclick="navigateWeek(1)">→</button>
+  </div>
+
+
+
   <div class="container-fluid">
-    <ul class="nav nav-pills my-3">
-      <% @days_of_week.each_with_index do |day, index| %>
-        <li class="nav-item text-center">
-          <a class="nav-link link-success" href="#" onclick="loadSchedule('<%= index %>')">
-            <%= day %> <br>
-            <small><%= @dates_of_week[index] %></small> <!-- Отображение даты под названием дня недели -->
-          </a>
+    <h4 class="my-3">Расписание</h4>
+    <ul id="task-list" class="list-group">
+      <% @tasks.each do |task| %>
+        <li class="list-group-item">
+          <% if task.start_time && task.end_time %>
+            <%= "#{task.start_time.strftime('%H:%M')} - #{task.end_time.strftime('%H:%M')}" %>
+          <% elsif task.start_time %>
+            <%= "#{task.start_time.strftime('%H:%M')}" %>
+          <% end %>
+          <button class="btn btn-link" onclick="openEditModal('<%= task.id || task.title.parameterize %>')"><%= task.title %></button>
         </li>
       <% end %>
     </ul>
-    <div id="schedule-container">
-      <p>Выберите день недели, чтобы увидеть расписание и добавить задачи.</p>
+    <button class="btn btn-primary mt-3" onclick="openCreateModal()">Добавить задачу</button>
+  </div>
+
+  <!-- Модальное окно для создания/редактирования задачи -->
+  <div id="taskModal" class="modal">
+    <div class="modal-content">
+      <span class="close" onclick="closeModal()">&times;</span>
+      <h3 id="modal-title">Добавить задачу</h3>
+      <form id="taskForm">
+        <input type="hidden" id="task-id" name="task[id]">
+        <label for="title">Заголовок:</label>
+        <input type="text" id="title" name="task[title]" required><br>
+
+        <label for="description">Описание:</label>
+        <textarea id="description" name="task[description]"></textarea><br>
+
+        <label for="start_time">Начало:</label>
+        <input type="time" id="start_time" name="task[start_time]"><br>
+
+        <label for="end_time">Окончание:</label>
+        <input type="time" id="end_time" name="task[end_time]"><br>
+
+        <button type="button" onclick="submitTask()">Сохранить</button>
+      </form>
     </div>
   </div>
 
   <script>
-    function loadSchedule(day) {
-      fetch(`/home/show_schedule/${day}`)
-        .then(response => response.text())
-        .then(html => {
-          document.getElementById("schedule-container").innerHTML = html;
-        });
+    function openCreateModal() {
+      document.getElementById("taskModal").style.display = "block";
+      document.getElementById("modal-title").innerText = "Добавить задачу";
+      document.getElementById("taskForm").reset();
     }
 
-    function saveTasks(day) {
-      const tasks = {};
-      document.querySelectorAll('.task-input').forEach(input => {
-        tasks[input.dataset.time] = input.value;
-      });
+    function openEditModal(id) {
+      if (id) { // Если id - число, значит это пользовательская задача
+        fetch(`/tasks/${id}/edit`)
+          .then(response => response.json())
+          .then(data => {
+            document.getElementById("taskModal").style.display = "block";
+            document.getElementById("modal-title").innerText = "Редактировать задачу";
+            document.getElementById("task-id").value = data.id;
+            document.getElementById("title").value = data.title;
+            document.getElementById("description").value = data.description;
+            document.getElementById("start_time").value = data.start_time.substring(11, 16);
+            document.getElementById("end_time").value = data.end_time.substring(11, 16);
+          });
+      } else {
+        alert("Эту задачу нельзя редактировать!");
+      }
+    }
 
-      fetch(`/home/save_schedule/${day}`, {
-        method: 'POST',
+
+    function closeModal() {
+      document.getElementById("taskModal").style.display = "none";
+    }
+
+    function submitTask() {
+      const formData = new FormData(document.getElementById("taskForm"));
+      const id = document.getElementById("task-id").value;
+      const method = id ? "PATCH" : "POST";
+      const url = id ? `/tasks/${id}` : "/tasks";
+
+      fetch(url, {
+        method: method,
         headers: {
-          'Content-Type': 'application/json',
           'X-CSRF-Token': '<%= form_authenticity_token %>'
         },
-        body: JSON.stringify({ tasks: tasks })
+        body: formData
       })
       .then(response => response.text())
-      .then(result => {
-        alert("Задачи сохранены!");
+      .then(() => {
+        alert("Задача сохранена!");
+        closeModal();
+        location.reload();
       });
+    }
+
+    function navigateWeek(offset) {
+      const params = new URLSearchParams(window.location.search);
+      const currentDate = new Date(params.get('date') || Date.now());
+      currentDate.setDate(currentDate.getDate() + offset * 7);
+      window.location.href = `?date=${currentDate.toISOString().split('T')[0]}`;
+    }
+
+    function openCalendar() {
+      document.getElementById('calendar').style.display = 'block';
+    }
+
+    function navigateToDate(date) {
+      if (date) {
+        window.location.href = `?date=${date}`;
+      }
     }
   </script>
 </body>
