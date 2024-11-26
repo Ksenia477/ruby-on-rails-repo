@@ -48,12 +48,8 @@
     <ul id="task-list" class="list-group">
       <% @tasks.each do |task| %>
         <li class="list-group-item">
-          <% if task.start_time && task.end_time %>
-            <%= "#{task.start_time.strftime('%H:%M')} - #{task.end_time.strftime('%H:%M')}" %>
-          <% elsif task.start_time %>
-            <%= "#{task.start_time.strftime('%H:%M')}" %>
-          <% end %>
-          <button class="btn btn-link" onclick="openEditModal('<%= task.id || task.title.parameterize %>')"><%= task.title %></button>
+          <%= "#{task.start_time.strftime('%H:%M')} - #{task.end_time.strftime('%H:%M')}" %>
+          <button class="btn btn-link" onclick="openEditModal('<%= task.id %>')"><%= task.title %></button>
         </li>
       <% end %>
     </ul>
@@ -73,6 +69,8 @@
         <label for="description">Описание:</label>
         <textarea id="description" name="task[description]"></textarea><br>
 
+        <input type="hidden" id="task-date" name="task[date]" value="<%= @current_date.to_s %>">
+
         <label for="start_time">Начало:</label>
         <input type="time" id="start_time" name="task[start_time]"><br>
 
@@ -80,44 +78,44 @@
         <input type="time" id="end_time" name="task[end_time]"><br>
 
         <button type="button" onclick="submitTask()">Сохранить</button>
+        <button id="delete-task-button" type="button">Удалить</button>
       </form>
     </div>
   </div>
 
   <script>
     function openCreateModal() {
+      document.querySelector(".modal-overlay").style.display = "block";
       document.getElementById("taskModal").style.display = "block";
       document.getElementById("modal-title").innerText = "Добавить задачу";
       document.getElementById("taskForm").reset();
     }
 
     function openEditModal(id) {
-      if (id) { // Если id - число, значит это пользовательская задача
-        fetch(`/tasks/${id}/edit`)
-          .then(response => response.json())
-          .then(data => {
-            document.getElementById("taskModal").style.display = "block";
-            document.getElementById("modal-title").innerText = "Редактировать задачу";
-            document.getElementById("task-id").value = data.id;
-            document.getElementById("title").value = data.title;
-            document.getElementById("description").value = data.description;
-            document.getElementById("start_time").value = data.start_time.substring(11, 16);
-            document.getElementById("end_time").value = data.end_time.substring(11, 16);
-          });
-      } else {
-        alert("Эту задачу нельзя редактировать!");
-      }
+      fetch(`/tasks/${id}/edit`)
+        .then(response => response.json())
+        .then(data => {
+          document.querySelector(".modal-overlay").style.display = "block";
+          document.getElementById("taskModal").style.display = "block";
+          document.getElementById("modal-title").innerText = "Редактировать задачу";
+          document.getElementById("task-id").value = data.id;
+          document.getElementById("title").value = data.title;
+          document.getElementById("description").value = data.description;
+          document.getElementById("start_time").value = data.start_time.substring(11, 16);
+          document.getElementById("end_time").value = data.end_time.substring(11, 16);
+          document.getElementById("delete-task-button").onclick = () => deleteTask(data.id);
+        });
     }
 
-
     function closeModal() {
+      document.querySelector(".modal-overlay").style.display = "none";
       document.getElementById("taskModal").style.display = "none";
     }
 
     function submitTask() {
       const formData = new FormData(document.getElementById("taskForm"));
-      const id = document.getElementById("task-id").value;
-      const method = id ? "PATCH" : "POST";
+      const id = document.getElementById("task-id").value; // ID задачи
+      const method = id ? "PATCH" : "POST"; // Если ID есть, редактируем, иначе создаём
       const url = id ? `/tasks/${id}` : "/tasks";
 
       fetch(url, {
@@ -127,11 +125,15 @@
         },
         body: formData
       })
-      .then(response => response.text())
-      .then(() => {
-        alert("Задача сохранена!");
-        closeModal();
-        location.reload();
+      .then(response => response.json())
+      .then(data => {
+        if (data.errors) {
+          showNotification("Ошибка: " + JSON.stringify(data.errors), "danger");
+        } else {
+          showNotification("Задача сохранена!", "success");
+          closeModal();
+          location.reload();
+        }
       });
     }
 
@@ -151,6 +153,55 @@
         window.location.href = `?date=${date}`;
       }
     }
+
+    function deleteTask(id) {
+      const modal = new bootstrap.Modal(document.getElementById("confirmationModal"));
+      const confirmButton = document.getElementById("confirmActionButton");
+
+      document.getElementById("confirmationMessage").innerText = "Вы уверены, что хотите удалить задачу?";
+
+      confirmButton.onclick = () => {
+        fetch(`/tasks/${id}`, {
+          method: "DELETE",
+          headers: {
+            "X-CSRF-Token": "<%= form_authenticity_token %>"
+          }
+        })
+        .then(response => {
+          if (response.ok) {
+            showNotification("Задача удалена", "success");
+            location.reload();
+          } else {
+            showNotification("Не удалось удалить задачу", "error");
+          }
+        });
+
+        modal.hide(); // Скрываем модальное окно после подтверждения
+      };
+
+      modal.show(); // Показываем модальное окно
+    }
+
+    function showNotification(message, type) {
+      const alertDiv = document.createElement("div");
+      alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+      alertDiv.role = "alert";
+      alertDiv.innerText = message;
+
+      const closeButton = document.createElement("button");
+      closeButton.type = "button";
+      closeButton.className = "btn-close";
+      closeButton.setAttribute("data-bs-dismiss", "alert");
+      closeButton.ariaLabel = "Close";
+
+      alertDiv.appendChild(closeButton);
+      document.body.appendChild(alertDiv);
+
+      setTimeout(() => {
+        alertDiv.remove();
+      }, 3000); // Уведомление исчезнет через 3 секунды
+    }
+
   </script>
 </body>
 </html>

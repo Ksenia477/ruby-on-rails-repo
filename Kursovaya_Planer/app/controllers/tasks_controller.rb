@@ -1,6 +1,6 @@
 class TasksController < ApplicationController
   def create
-    task_date = params[:task][:date]
+    task_date = params[:task][:date] || Date.current.to_s
     start_time = DateTime.parse("#{task_date} #{params[:task][:start_time]}")
     end_time = DateTime.parse("#{task_date} #{params[:task][:end_time]}") if params[:task][:end_time].present?
 
@@ -21,12 +21,41 @@ class TasksController < ApplicationController
 
   def update
     @task = Task.find(params[:id])
-    if @task.update(task_params)
-      render json: @task, status: :ok
+
+    # Проверяем, принадлежит ли задача текущему пользователю
+    if @task.user_id == current_user&.id
+      task_date = params[:task][:date] || @task.start_time.to_date.to_s
+      start_time = DateTime.parse("#{task_date} #{params[:task][:start_time]}")
+      end_time = DateTime.parse("#{task_date} #{params[:task][:end_time]}") if params[:task][:end_time].present?
+
+      if @task.update(task_params.merge(start_time: start_time, end_time: end_time))
+        render json: @task, status: :ok
+      else
+        render json: { errors: @task.errors.full_messages }, status: :unprocessable_entity
+      end
     else
-      render json: @task.errors, status: :unprocessable_entity
+      render json: { error: "You are not authorized to update this task" }, status: :forbidden
     end
   end
+
+
+
+  def destroy
+    @task = Task.find(params[:id])
+
+    # Проверяем, принадлежит ли задача текущему пользователю
+    if @task.user_id == current_user&.id
+      if @task.destroy
+        render json: { message: "Task deleted successfully" }, status: :ok
+      else
+        render json: { error: "Failed to delete task" }, status: :unprocessable_entity
+      end
+    else
+      render json: { error: "You are not authorized to delete this task" }, status: :forbidden
+    end
+  end
+
+
 
   private
 
