@@ -41,8 +41,6 @@
     <button onclick="navigateWeek(1)">→</button>
   </div>
 
-
-
   <div class="container-fluid">
     <h4 class="my-3">Расписание</h4>
     <ul id="task-list" class="list-group">
@@ -54,6 +52,8 @@
       <% end %>
     </ul>
     <button class="btn btn-primary mt-3" onclick="openCreateModal()">Добавить задачу</button>
+    <button class="btn btn-info" onclick="optimizeSchedule()">Улучшить расписание</button>
+    <button class="btn btn-warning" onclick="shiftSchedule()">Сдвинуть расписание</button>
   </div>
 
   <!-- Модальное окно для создания/редактирования задачи -->
@@ -76,6 +76,9 @@
 
         <label for="end_time">Окончание:</label>
         <input type="time" id="end_time" name="task[end_time]"><br>
+
+        <label for="hashtag">Хэштег:</label>
+        <input type="text" id="hashtag" name="task[hashtag]" placeholder="#бабушка"><br>
 
         <button type="button" onclick="submitTask()">Сохранить</button>
         <button id="delete-task-button" type="button">Удалить</button>
@@ -121,19 +124,26 @@
       fetch(url, {
         method: method,
         headers: {
-          'X-CSRF-Token': '<%= form_authenticity_token %>'
+          'X-CSRF-Token': '<%= form_authenticity_token %>',
+          'Accept': 'application/json'
         },
         body: formData
       })
-      .then(response => response.json())
-      .then(data => {
-        if (data.errors) {
-          showNotification("Ошибка: " + JSON.stringify(data.errors), "danger");
-        } else {
-          showNotification("Задача сохранена!", "success");
-          closeModal();
-          location.reload();
+      .then(response => {
+        if (!response.ok) {
+          return response.json().then(data => {
+            throw new Error(data.errors || 'Неизвестная ошибка');
+          });
         }
+        return response.json();
+      })
+      .then(data => {
+        showNotification("Задача сохранена!", "success");
+        closeModal();
+        location.reload();
+      })
+      .catch(error => {
+        showNotification("Ошибка: " + error.message, "danger");
       });
     }
 
@@ -199,9 +209,161 @@
 
       setTimeout(() => {
         alertDiv.remove();
-      }, 3000); // Уведомление исчезнет через 3 секунды
+      }, 15000); // Уведомление исчезнет через 15 секунд
     }
 
+    let suggestionIndex = 0;
+    let suggestions = [];
+
+    function displayOptimizationModal(receivedSuggestions) {
+      suggestions = receivedSuggestions;
+      suggestionIndex = 0;
+
+      showNextSuggestion();
+    }
+
+    function showNextSuggestion() {
+      if (suggestionIndex >= suggestions.length) {
+        showNotification("Все предложения обработаны!", "success");
+        location.reload();
+        return;
+      }
+
+      const suggestion = suggestions[suggestionIndex];
+      const modalContent = `
+        <p>Можно перенести задачу "<strong>${suggestion.task_title}</strong>" (${suggestion.current_time}) на:</p>
+        <button class="btn btn-primary" onclick="applyOption(${suggestion.task_id}, '${suggestion.option_1}')">Вариант 1: ${suggestion.option_1}</button>
+        <button class="btn btn-primary" onclick="applyOption(${suggestion.task_id}, '${suggestion.option_2}')">Вариант 2: ${suggestion.option_2}</button>
+        <button class="btn btn-secondary" onclick="skipSuggestion()">Оставить как есть</button>
+      `;
+
+      document.getElementById('optimizationSuggestions').innerHTML = modalContent;
+      new bootstrap.Modal(document.getElementById('optimizationResultModal')).show();
+    }
+
+    function applyOption(taskId, timeRange) {
+      const [start_time, end_time] = timeRange.split(' - ');
+      fetch('/home/apply_optimization', {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "<%= form_authenticity_token %>",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ task_id: taskId, start_time, end_time })
+      })
+        .then(response => response.json())
+        .then(data => {
+          showNotification(data.message, "success");
+          suggestionIndex++;
+          showNextSuggestion();
+        });
+    }
+
+    function skipSuggestion() {
+      suggestionIndex++;
+      showNextSuggestion();
+    }
+
+    function optimizeSchedule() {
+      fetch('/home/optimize_schedule', {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "<%= form_authenticity_token %>"
+        }
+      })
+        .then(response => response.json())
+        .then(data => {
+          if (data.suggestions.length === 0) {
+            showNotification("Нет предложений для улучшения.", "info");
+          } else {
+            displayOptimizationModal(data.suggestions);
+          }
+        });
+    }
+
+    function mergeTask(index) {
+      const suggestion = suggestions[index];
+      fetch(`/home/merge_tasks`, {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "<%= form_authenticity_token %>",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ task1_id: suggestion.task1_id, task2_id: suggestion.task2_id })
+      }).then(() => location.reload());
+    }
+
+    function transferTask(index) {
+      const suggestion = suggestions[index];
+      fetch(`/home/transfer_task`, {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "<%= form_authenticity_token %>",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ task_id: suggestion.task_id, destination_time: suggestion.destination_time })
+      }).then(() => location.reload());
+    }
+
+
+    function shiftSchedule() {
+      fetch('/home/shift_schedule', {
+        method: "POST",
+        headers: {
+          "X-CSRF-Token": "<%= form_authenticity_token %>",
+          "Content-Type": "application/json"
+        }
+      })
+        .then(response => {
+          if (!response.ok) {
+            throw new Error("Ошибка при обновлении расписания");
+          }
+          return response.json();
+        })
+        .then(data => {
+          if (data.message) {
+            showNotification(data.message, "success");
+            location.reload(); // Перезагрузка страницы для отображения изменений
+          }
+        })
+        .catch(error => {
+          showNotification("Не удалось обновить расписание: " + error.message, "danger");
+        });
+    }
+
+
   </script>
+
+  <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="resultModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="resultModalLabel">Результаты</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="resultMessage">
+          <!-- Результаты будут вставляться сюда -->
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Закрыть</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<div class="modal fade" id="optimizationResultModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Улучшение расписания</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body" id="optimizationSuggestions">
+        <!-- Контент предложений появится здесь -->
+      </div>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
