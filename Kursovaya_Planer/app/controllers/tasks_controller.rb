@@ -12,8 +12,17 @@ class TasksController < ApplicationController
   end
 
   def edit
-    @task = Task.find(params[:id])
-    render json: @task
+    def edit
+      task = Task.find(params[:id])
+      render json: {
+        id: task.id,
+        title: task.title,
+        description: task.description,
+        start_time: task.start_time,
+        end_time: task.end_time,
+        hashtag: task.hashtag
+      }
+    end
   end
 
   def update

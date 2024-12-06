@@ -90,28 +90,32 @@ class HomeController < ApplicationController
     end
   end
 
-
-
   def shift_schedule
-    tasks = Task.where(user_id: current_user.id, start_time: @current_date.beginning_of_day..@current_date.end_of_day).order(:start_time)
+    current_date = params[:date].present? ? Date.parse(params[:date]) : Date.current
+    tasks = Task.where(user_id: current_user.id, start_time: current_date.beginning_of_day..current_date.end_of_day).order(:start_time)
 
-    tasks.each_cons(2) do |task1, task2|
-      # Проверяем пересечение задач
-      if task1.end_time > task2.start_time
-        # Вычисляем разницу и сдвигаем task2
-        diff = task1.end_time - task2.start_time
-        task2.start_time += diff
-        task2.end_time += diff
-        unless task2.save
-          render json: { error: "Ошибка при сохранении задачи #{task2.title}" }, status: :unprocessable_entity
-          return
-        end
+    if tasks.empty?
+      render json: { message: "На текущий день задач нет." } and return
+    end
+
+    changes_made = false
+
+    tasks.each_cons(2) do |prev_task, curr_task|
+      if prev_task.end_time > curr_task.start_time
+        # Пересечение найдено, сдвигаем текущую задачу
+        overlap = prev_task.end_time - curr_task.start_time
+        curr_task.start_time += overlap
+        curr_task.end_time += overlap
+        curr_task.save!
+        changes_made = true
       end
     end
 
-    render json: { message: "Расписание обновлено успешно." }, status: :ok
-  rescue StandardError => e
-    render json: { error: "Ошибка: #{e.message}" }, status: :unprocessable_entity
+    if changes_made
+      render json: { message: "Расписание было оптимизировано." }
+    else
+      render json: { message: "В расписании нет пересечений между задачами." }
+    end
   end
 
   def merge_tasks
