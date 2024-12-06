@@ -243,13 +243,21 @@
 
     function applyOption(taskId, timeRange) {
       const [start_time, end_time] = timeRange.split(' - ');
+      const params = new URLSearchParams(window.location.search);
+      const currentDate = params.get('date') || new Date().toISOString().split('T')[0]; // Получение текущей даты из URL
+
       fetch('/home/apply_optimization', {
         method: "POST",
         headers: {
           "X-CSRF-Token": "<%= form_authenticity_token %>",
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ task_id: taskId, start_time, end_time })
+        body: JSON.stringify({
+          task_id: taskId,
+          start_time,
+          end_time,
+          date: currentDate // Передача выбранной даты
+        })
       })
         .then(response => response.json())
         .then(data => {
@@ -259,13 +267,17 @@
         });
     }
 
+
     function skipSuggestion() {
       suggestionIndex++;
       showNextSuggestion();
     }
 
     function optimizeSchedule() {
-      fetch('/home/optimize_schedule', {
+      const params = new URLSearchParams(window.location.search);
+      const currentDate = params.get('date') || new Date().toISOString().split('T')[0];
+
+      fetch(`/home/optimize_schedule?date=${currentDate}`, {
         method: "POST",
         headers: {
           "X-CSRF-Token": "<%= form_authenticity_token %>"
@@ -280,6 +292,7 @@
           }
         });
     }
+
 
     function mergeTask(index) {
       const suggestion = suggestions[index];
@@ -307,12 +320,16 @@
 
 
     function shiftSchedule() {
+      const params = new URLSearchParams(window.location.search);
+      const currentDate = params.get('date') || new Date().toISOString().split('T')[0];
+
       fetch('/home/shift_schedule', {
         method: "POST",
         headers: {
           "X-CSRF-Token": "<%= form_authenticity_token %>",
           "Content-Type": "application/json"
-        }
+        },
+        body: JSON.stringify({ date: currentDate }) // Передаём дату
       })
         .then(response => {
           if (!response.ok) {
@@ -330,6 +347,7 @@
           showNotification("Не удалось обновить расписание: " + error.message, "danger");
         });
     }
+
 
 
   </script>

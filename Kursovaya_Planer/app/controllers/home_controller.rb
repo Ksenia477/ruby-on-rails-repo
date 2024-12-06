@@ -42,11 +42,16 @@ class HomeController < ApplicationController
   def optimize_schedule
     current_date = params[:date].present? ? Date.parse(params[:date]) : Date.current
     tasks = Task.where(user_id: current_user.id, start_time: current_date.beginning_of_day..current_date.end_of_day).order(:start_time)
-    grouped_tasks = tasks.group_by(&:hashtag).reject { |hashtag, _| hashtag.nil? }
+    grouped_tasks = tasks.group_by(&:hashtag).reject { |hashtag, tasks| hashtag.nil? || tasks.size < 2 }
     suggestions = []
 
     grouped_tasks.each do |hashtag, tasks|
       tasks.each_cons(2) do |task1, task2|
+        # Проверка: задачи уже стоят рядом
+        if task1.end_time == task2.start_time
+          next
+        end
+
         # Вариант 1: Переместить task2 сразу после task1
         task2_duration = task2.end_time - task2.start_time
         new_start_time1 = task1.end_time
@@ -67,13 +72,15 @@ class HomeController < ApplicationController
       end
     end
 
-    render json: { suggestions: suggestions }
+    render json: { suggestions: suggestions.uniq }
   end
+
 
   def apply_optimization
     task = Task.find(params[:task_id])
-    new_start_time = Time.parse(params[:start_time])
-    new_end_time = Time.parse(params[:end_time])
+    current_date = Date.parse(params[:date]) # Получение даты из параметров
+    new_start_time = Time.parse(params[:start_time]).change(year: current_date.year, month: current_date.month, day: current_date.day)
+    new_end_time = Time.parse(params[:end_time]).change(year: current_date.year, month: current_date.month, day: current_date.day)
 
     if task.update(start_time: new_start_time, end_time: new_end_time)
       render json: { message: "Задача обновлена успешно" }
@@ -81,6 +88,7 @@ class HomeController < ApplicationController
       render json: { message: "Ошибка обновления задачи: #{task.errors.full_messages.join(', ')}" }, status: :unprocessable_entity
     end
   end
+
 
 
   def shift_schedule
