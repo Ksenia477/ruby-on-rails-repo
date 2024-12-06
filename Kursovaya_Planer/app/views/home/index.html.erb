@@ -32,9 +32,9 @@
   <div class="week-navigation">
     <button onclick="navigateWeek(-1)">←</button>
     <div class="week d-flex">
-      <% @week_dates.each_with_index do |date, index| %>
-        <a href="?date=<%= date %>" class="btn btn-outline-success mx-1 <%= 'active' if date == Date.parse(params[:date] || Date.current.to_s) %>">
-          <%= @days_of_week[index] %>, <%= date.strftime('%d %B') %>
+      <% @week_days_with_dates.each_with_index do |day_with_date, index| %>
+        <a href="?date=<%= @week_dates[index] %>" class="btn btn-outline-success mx-1 <%= 'active' if @week_dates[index] == Date.parse(params[:date] || Date.current.to_s) %>">
+          <%= day_with_date %>
         </a>
       <% end %>
     </div>

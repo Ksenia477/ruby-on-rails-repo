@@ -1,25 +1,26 @@
 class HomeController < ApplicationController
   def index
-    I18n.locale = :ru
+    I18n.locale = :ru # Установить локаль на русский
     @current_date = params[:date].present? ? Date.parse(params[:date]) : Date.current
-    @current_date_formatted = @current_date.strftime("%d %B").mb_chars.downcase.to_s
 
+    # Форматирование текущей даты (заголовок страницы)
+    @current_date_formatted = I18n.l(@current_date, format: "%d %B").downcase
 
-    if current_user
-      # Загружаем задачи пользователя
-      @tasks = Task.where(user_id: current_user.id, start_time: @current_date.beginning_of_day..@current_date.end_of_day).order(:start_time)
-    else
-      # Неавторизованные пользователи видят только "Пробуждение" и "Сон"
-      @tasks = default_tasks_for_today.select { |task| task.user_id.nil? }
+    # Заголовки для дней недели
+    start_of_week = @current_date.beginning_of_week
+    @week_dates = (0..6).map { |i| start_of_week + i }
+    @week_days_with_dates = @week_dates.map do |date|
+      "#{I18n.t('date.day_names')[date.wday]}, #{date.strftime('%d')} #{I18n.t('date.month_names')[date.month]}"
     end
 
-    start_of_week = @current_date.beginning_of_week
-    @days_of_week = I18n.t('date.day_names')
-    @week_dates = (0..6).map { |i| start_of_week + i }
-
-    @tasks = (@tasks + default_tasks_for_today).uniq.sort_by(&:start_time)
+    if current_user
+      # Задачи авторизованного пользователя
+      @tasks = Task.where(user_id: current_user.id, start_time: @current_date.beginning_of_day..@current_date.end_of_day).order(:start_time)
+    else
+      # Задачи для неавторизованных пользователей
+      @tasks = default_tasks_for_today.select { |task| task.user_id.nil? }
+    end
   end
-
 
   def show_schedule
     I18n.locale = :ru
