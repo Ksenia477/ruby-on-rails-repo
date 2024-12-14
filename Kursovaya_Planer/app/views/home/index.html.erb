@@ -11,7 +11,7 @@
       <h3 class="mt-4" id="current-date"><%= @current_date_formatted %></h3>
       <% if user_signed_in? %>
         <div class="dropdown">
-          <button class="btn btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+          <button class="btn btn-secondary dropdown-toggle" type="button" data-toggle="dropdown">
             <%= current_user.email %>
           </button>
           <ul class="dropdown-menu">
@@ -106,6 +106,7 @@
           document.getElementById("description").value = data.description;
           document.getElementById("start_time").value = data.start_time.substring(11, 16);
           document.getElementById("end_time").value = data.end_time.substring(11, 16);
+          document.getElementById("hashtag").value = data.hashtag || "";
           document.getElementById("delete-task-button").onclick = () => deleteTask(data.id);
         });
     }

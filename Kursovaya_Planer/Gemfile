@@ -39,6 +39,8 @@ gem 'devise'
 
 gem 'sassc-rails'
 
+gem 'rails-erd'
+
 gem 'bootstrap'
 
 group :development, :test do
