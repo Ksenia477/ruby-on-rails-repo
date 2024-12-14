@@ -54,27 +54,25 @@ class HomeController < ApplicationController
 
         # Вариант 1: Переместить task2 сразу после task1
         task2_duration = task2.end_time - task2.start_time
-        new_start_time1 = task1.end_time
-        new_end_time1 = new_start_time1 + task2_duration
+        new_start_time2 = task1.end_time
+        new_end_time2 = new_start_time2 + task2_duration
 
         # Вариант 2: Переместить task1 сразу перед task2
         task1_duration = task1.end_time - task1.start_time
-        new_end_time2 = task2.start_time
-        new_start_time2 = new_end_time2 - task1_duration
+        new_end_time1 = task2.start_time
+        new_start_time1 = new_end_time1 - task1_duration
 
         suggestions << {
-          task_title: task2.title,
-          task_id: task2.id,
-          current_time: "#{task2.start_time.strftime('%H:%M')} - #{task2.end_time.strftime('%H:%M')}",
+          task1: task1,
+          task2: task2,
           option_1: "#{new_start_time1.strftime('%H:%M')} - #{new_end_time1.strftime('%H:%M')}",
           option_2: "#{new_start_time2.strftime('%H:%M')} - #{new_end_time2.strftime('%H:%M')}"
         }
       end
     end
 
-    render json: { suggestions: suggestions.uniq }
+    render json: { suggestions: suggestions }
   end
-
 
   def apply_optimization
     task = Task.find(params[:task_id])
@@ -88,7 +86,6 @@ class HomeController < ApplicationController
       render json: { message: "Ошибка обновления задачи: #{task.errors.full_messages.join(', ')}" }, status: :unprocessable_entity
     end
   end
-
 
 
   def shift_schedule

@@ -232,9 +232,10 @@
 
       const suggestion = suggestions[suggestionIndex];
       const modalContent = `
-        <p>Можно перенести задачу "<strong>${suggestion.task_title}</strong>" (${suggestion.current_time}) на:</p>
-        <button class="btn btn-primary" onclick="applyOption(${suggestion.task_id}, '${suggestion.option_1}')">Вариант 1: ${suggestion.option_1}</button>
-        <button class="btn btn-primary" onclick="applyOption(${suggestion.task_id}, '${suggestion.option_2}')">Вариант 2: ${suggestion.option_2}</button>
+        <p>Можно перенести задачу "<strong>${suggestion.task1.title}</strong>" (${suggestion.task1.start_time} - ${suggestion.task1.end_time}) на: </p>
+        <button class="btn btn-primary" onclick="applyOption('${suggestion.task1.id}', '${suggestion.option_1}')">Вариант 1:  ${suggestion.option_1} </button>
+        <p>Можно перенести задачу "<strong>${suggestion.task2.title}</strong>" (${suggestion.task2.start_time} - ${suggestion.task2.end_time}) на: </p>
+        <button class="btn btn-primary" onclick="applyOption('${suggestion.task2.id}', '${suggestion.option_2}')">Вариант 2:  ${suggestion.option_2} </button>
         <button class="btn btn-secondary" onclick="skipSuggestion()">Оставить как есть</button>
       `;
 
@@ -254,7 +255,7 @@
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          task_id: taskId,
+          task_id: taskId, // передаем ID соответствующей задачи
           start_time,
           end_time,
           date: currentDate // Передача выбранной даты
@@ -267,7 +268,6 @@
           showNextSuggestion();
         });
     }
-
 
     function skipSuggestion() {
       suggestionIndex++;
@@ -370,19 +370,19 @@
     </div>
   </div>
 
-<div class="modal fade" id="optimizationResultModal" tabindex="-1" aria-hidden="true">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Улучшение расписания</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-      </div>
-      <div class="modal-body" id="optimizationSuggestions">
-        <!-- Контент предложений появится здесь -->
+  <div class="modal fade" id="optimizationResultModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title">Улучшение расписания</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body" id="optimizationSuggestions">
+          <!-- Контент предложений появится здесь -->
+        </div>
       </div>
     </div>
   </div>
-</div>
 
 </body>
 </html>
