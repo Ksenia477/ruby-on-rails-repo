@@ -2,7 +2,7 @@ class HomeController < ApplicationController
   def index
     I18n.locale = :ru
     @current_date = params[:date].present? ? Date.parse(params[:date]) : Date.current
-    @current_date_formatted = @current_date.strftime("%d %B").mb_chars.downcase.to_s
+    @current_date_formatted = I18n.l(@current_date, format: "%d %B").mb_chars.downcase.to_s
 
 
     if current_user

@@ -8,6 +8,7 @@
 <body>
   <nav class="navbar navbar-expand-lg bg-body-tertiary">
     <div class="container-fluid">
+      <a class="navbar-brand" href="#">TaskFlow</a>
       <h3 class="mt-4" id="current-date"><%= @current_date_formatted %></h3>
       <% if user_signed_in? %>
         <div class="dropdown">
@@ -34,7 +35,7 @@
     <div class="week d-flex">
       <% @week_dates.each_with_index do |date, index| %>
         <a href="?date=<%= date %>" class="btn btn-outline-success mx-1 <%= 'active' if date == Date.parse(params[:date] || Date.current.to_s) %>">
-          <%= @days_of_week[index] %>, <%= date.strftime('%d %B') %>
+          <%= @days_of_week[index] %>, <%= I18n.l(date, format: "%d %B") %>
         </a>
       <% end %>
     </div>
