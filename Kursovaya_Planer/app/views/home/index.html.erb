@@ -118,6 +118,20 @@
     }
 
     function submitTask() {
+      const title = document.getElementById("title").value.trim();
+      const startTime = document.getElementById("start_time").value;
+      const endTime = document.getElementById("end_time").value;
+
+      if (!title) {
+        showNotification("Поле 'Заголовок' не может быть пустым", "danger");
+        return;
+      }
+
+      if (startTime && endTime && startTime >= endTime) {
+        showNotification("Время начала должно быть меньше времени окончания", "danger");
+        return;
+      }
+
       const formData = new FormData(document.getElementById("taskForm"));
       const id = document.getElementById("task-id").value; // ID задачи
       const method = id ? "PATCH" : "POST"; // Если ID есть, редактируем, иначе создаём
