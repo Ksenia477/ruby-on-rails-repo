@@ -1,5 +1,5 @@
 class TasksController < ApplicationController
-  before_action :authenticate_user!
+  # before_action :authenticate_user!
 
   def create
     task_date = params[:task][:date] || Date.current.to_s
@@ -10,12 +10,6 @@ class TasksController < ApplicationController
       render json: @task, status: :created
     else
       render json: @task.errors, status: :unprocessable_entity
-    end
-    @task = current_user.tasks.build(task_params)
-    if @task.save
-      render json: @task, status: :ok
-    else
-      render json: { errors: @task.errors.full_messages.join(", ") }, status: :unprocessable_entity
     end
   end
 
@@ -46,13 +40,6 @@ class TasksController < ApplicationController
     else
       render json: { error: "You are not authorized to update this task" }, status: :forbidden
     end
-
-    @task = current_user.tasks.find(params[:id])
-    if @task.update(task_params)
-      render json: @task, status: :ok
-    else
-      render json: { errors: @task.errors.full_messages.join(", ") }, status: :unprocessable_entity
-    end
   end
 
   def destroy
@@ -72,6 +59,6 @@ class TasksController < ApplicationController
   private
 
   def task_params
-    params.require(:task).permit(:title, :description, :start_time, :end_time, :hashtag, :date)
+    params.require(:task).permit(:title, :description, :start_time, :end_time, :hashtag)
   end
 end
